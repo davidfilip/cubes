@@ -1,21 +1,22 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include "config.h"
 
-#define CUBE_KEY_FORWARD 'W'
-#define CUBE_KEY_BACKWARD 'S'
-#define CUBE_KEY_LEFT 'A'
-#define CUBE_KEY_RIGHT 'D'
+typedef struct {
+  GLFWwindow *window;
+} Model;
+
+static Model model;
+static Model *g = &model;
 
 void onKey(GLFWwindow *window, int key, int scancode, int action, int mods) {
-  if (key == GLFW_KEY_ENTER) {
-    printf("ENTER PRESSED.\n");
+  if (key == GLFW_KEY_ESCAPE) {
+    printf("ESC PRESSED...\n");
   }
 }
 
 int main(void){
-  GLFWwindow* window;
-
   printf("Cubes game started...");
 
   if (!glfwInit()) {
@@ -30,29 +31,27 @@ int main(void){
   glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #endif
 
-  window = glfwCreateWindow(1280, 720, "Cubes", NULL, NULL);
-  if (!window) {
+  g->window = glfwCreateWindow(1280, 720, "Cubes", NULL, NULL);
+  if (!g->window) {
     glfwTerminate();
     return -1;
   }
 
-  glfwMakeContextCurrent(window);
+  glfwMakeContextCurrent(g->window);
 
   if (glewInit() != GLEW_OK) {
     printf("Failed to initialize GLEW.\n");
     return -1;
   }
 
-  glfwSetKeyCallback(window, onKey);
+  glfwSetKeyCallback(g->window, onKey);
+  glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-  /* Loop until the user closes the window */
-  glViewport(0, 0, 1280, 720);
-  while (!glfwWindowShouldClose(window))
-  {
-    glClearColor(250.0f / 255.0f, 119.0f / 255.0f, 110.0f / 255.0f, 1.0f);
+  while (!glfwWindowShouldClose(g->window)){
+    glClearColor(135.0f / 255.0f, 206.0f / 255.0f, 250.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(g->window);
     glfwPollEvents();
   }
 
