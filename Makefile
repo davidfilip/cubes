@@ -7,9 +7,9 @@ run:
 	$(BUILD_PATH)
 
 build:
-	clang ./src/main.c ./src/util.c $(LIB) -framework OpenGL -o $(BUILD_PATH)
+	clang ./src/main.c ./src/util.c ./src/matrix.c ./src/cube.c ./src/item.c $(LIB) -framework OpenGL -o $(BUILD_PATH)
 
 # BUILD AND RUN IN ONE GO
 s:
-	clang ./src/main.c ./src/util.c $(LIB) -framework OpenGL -o $(BUILD_PATH)
+	clang ./src/main.c ./src/util.c ./src/matrix.c ./src/cube.c ./src/item.c $(LIB) -framework OpenGL -o $(BUILD_PATH)
 	$(BUILD_PATH)
