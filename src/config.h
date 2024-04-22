@@ -15,5 +15,6 @@
 #define CUBE_KEY_JUMP GLFW_KEY_SPACE
 
 #define RENDER_CHUNK_RADIUS 10
+#define CHUNK_SIZE 32
 
 #endif
