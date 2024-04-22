@@ -351,13 +351,14 @@ int main(void){
     return -1;
   }
 
-  g->window = glfwCreateWindow(1280, 720, "Cubes", NULL, NULL);
+  g->window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Cubes", NULL, NULL);
   if (!g->window) {
     glfwTerminate();
     return -1;
   }
 
   glfwMakeContextCurrent(g->window);
+  glfwSwapInterval(VSYNC);
   glfwSetInputMode(g->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetKeyCallback(g->window, on_key_press);
   glfwSetMouseButtonCallback(g->window, on_mouse_button);

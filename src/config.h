@@ -1,8 +1,9 @@
 #ifndef _config_h_
 #define _config_h_
 
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 768
+#define WINDOW_WIDTH 1280
+#define WINDOW_HEIGHT 720
+#define VSYNC 1
 
 #define SHOW_INFO_TEXT 1
 #define INVERT_MOUSE 0
