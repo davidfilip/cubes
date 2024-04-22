@@ -16,4 +16,8 @@ void make_player(
     float *data,
     float x, float y, float z, float rx, float ry);
 
+void make_character(
+    float *data,
+    float x, float y, float n, float m, char c);
+
 #endif

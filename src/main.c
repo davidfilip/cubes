@@ -11,6 +11,10 @@
 
 #define MAX_PLAYERS 8
 
+#define ALIGN_LEFT 0
+#define ALIGN_CENTER 1
+#define ALIGN_RIGHT 2
+
 typedef struct {
   float x;
   float y;
@@ -79,6 +83,39 @@ int get_scale_factor() {
   return result;
 }
 
+
+void draw_triangles_2d(Attrib *attrib, GLuint buffer, int count) {
+  glBindBuffer(GL_ARRAY_BUFFER, buffer);
+  glEnableVertexAttribArray(attrib->position);
+  glEnableVertexAttribArray(attrib->uv);
+  glVertexAttribPointer(attrib->position, 2, GL_FLOAT, GL_FALSE,
+      sizeof(GLfloat) * 4, 0);
+  glVertexAttribPointer(attrib->uv, 2, GL_FLOAT, GL_FALSE,
+      sizeof(GLfloat) * 4, (GLvoid *)(sizeof(GLfloat) * 2));
+  glDrawArrays(GL_TRIANGLES, 0, count);
+  glDisableVertexAttribArray(attrib->position);
+  glDisableVertexAttribArray(attrib->uv);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void draw_triangles_3d_ao(Attrib *attrib, GLuint buffer, int count) {
+  glBindBuffer(GL_ARRAY_BUFFER, buffer);
+  glEnableVertexAttribArray(attrib->position);
+  glEnableVertexAttribArray(attrib->normal);
+  glEnableVertexAttribArray(attrib->uv);
+  glVertexAttribPointer(attrib->position, 3, GL_FLOAT, GL_FALSE,
+      sizeof(GLfloat) * 10, 0);
+  glVertexAttribPointer(attrib->normal, 3, GL_FLOAT, GL_FALSE,
+      sizeof(GLfloat) * 10, (GLvoid *)(sizeof(GLfloat) * 3));
+  glVertexAttribPointer(attrib->uv, 4, GL_FLOAT, GL_FALSE,
+      sizeof(GLfloat) * 10, (GLvoid *)(sizeof(GLfloat) * 6));
+  glDrawArrays(GL_TRIANGLES, 0, count);
+  glDisableVertexAttribArray(attrib->position);
+  glDisableVertexAttribArray(attrib->normal);
+  glDisableVertexAttribArray(attrib->uv);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 GLuint gen_player_buffer(float x, float y, float z, float rx, float ry) {
   GLfloat *data = malloc_faces(10, 6);
   make_player(data, x, y, z, rx, ry);
@@ -100,22 +137,35 @@ GLuint gen_cube_buffer(float x, float y, float z, float n, int w) {
   return gen_faces(10, 6, data);
 }
 
-void draw_triangles_3d_ao(Attrib *attrib, GLuint buffer, int count) {
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glEnableVertexAttribArray(attrib->position);
-    glEnableVertexAttribArray(attrib->normal);
-    glEnableVertexAttribArray(attrib->uv);
-    glVertexAttribPointer(attrib->position, 3, GL_FLOAT, GL_FALSE,
-        sizeof(GLfloat) * 10, 0);
-    glVertexAttribPointer(attrib->normal, 3, GL_FLOAT, GL_FALSE,
-        sizeof(GLfloat) * 10, (GLvoid *)(sizeof(GLfloat) * 3));
-    glVertexAttribPointer(attrib->uv, 4, GL_FLOAT, GL_FALSE,
-        sizeof(GLfloat) * 10, (GLvoid *)(sizeof(GLfloat) * 6));
-    glDrawArrays(GL_TRIANGLES, 0, count);
-    glDisableVertexAttribArray(attrib->position);
-    glDisableVertexAttribArray(attrib->normal);
-    glDisableVertexAttribArray(attrib->uv);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+GLuint gen_text_buffer(float x, float y, float n, char *text) {
+  int length = strlen(text);
+  GLfloat *data = malloc_faces(4, length);
+  for (int i = 0; i < length; i++) {
+    make_character(data + i * 24, x, y, n / 2, n, text[i]);
+    x += n;
+  }
+  return gen_faces(4, length, data);
+}
+
+void draw_text(Attrib *attrib, GLuint buffer, int length) {
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  draw_triangles_2d(attrib, buffer, length * 6);
+  glDisable(GL_BLEND);
+}
+
+void render_text(Attrib *attrib, int justify, float x, float y, float n, char *text) {
+  float matrix[16];
+  set_matrix_2d(matrix, g->width, g->height);
+  glUseProgram(attrib->program);
+  glUniformMatrix4fv(attrib->matrix, 1, GL_FALSE, matrix);
+  glUniform1i(attrib->sampler, 1);
+  glUniform1i(attrib->extra1, 0);
+  int length = strlen(text);
+  x -= n * justify * (length - 1) / 2;
+  GLuint buffer = gen_text_buffer(x, y, n, text);
+  draw_text(attrib, buffer, length);
+  del_buffer(buffer);
 }
 
 void render_item(Attrib *attrib) {
@@ -261,6 +311,10 @@ int main(void){
     return -1;
   }
 
+  glEnable(GL_CULL_FACE);
+  glEnable(GL_DEPTH_TEST);
+  glLogicOp(GL_INVERT);
+
   // LOAD TEXTURES
   GLuint texture;
   glGenTextures(1, &texture);
@@ -270,8 +324,17 @@ int main(void){
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   load_png_texture("textures/texture.png");
 
+  GLuint font;
+  glGenTextures(1, &font);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, font);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  load_png_texture("textures/font.png");
+
   // SHADERS
   Attrib block_attrib = {0};
+  Attrib text_attrib = {0};
   GLuint program;
 
   program = load_program("shaders/block_vertex.glsl", "shaders/block_fragment.glsl");
@@ -287,6 +350,14 @@ int main(void){
   block_attrib.extra4 = glGetUniformLocation(program, "ortho");
   block_attrib.camera = glGetUniformLocation(program, "camera");
   block_attrib.timer = glGetUniformLocation(program, "timer");
+
+  program = load_program("shaders/text_vertex.glsl", "shaders/text_fragment.glsl");
+  text_attrib.program = program;
+  text_attrib.position = glGetAttribLocation(program, "position");
+  text_attrib.uv = glGetAttribLocation(program, "uv");
+  text_attrib.matrix = glGetUniformLocation(program, "matrix");
+  text_attrib.sampler = glGetUniformLocation(program, "sampler");
+  text_attrib.extra1 = glGetUniformLocation(program, "is_sign");
 
   glfwSetKeyCallback(g->window, onKey);
   g->game_running = true;
@@ -330,6 +401,20 @@ int main(void){
 
     render_item(&block_attrib);
     render_player(&block_attrib, me);
+
+    // RENDER TEXT //
+    char text_buffer[1024];
+    float ts = 20 * g->scale; // TODO: was 12 * g->scale
+    float tx = ts / 2;
+    float ty = g->height - ts;
+    if (SHOW_INFO_TEXT) {
+      snprintf(text_buffer, 1024,
+        "Hello, (%.2f, %.2f, %.2f) %dfps",
+        s->x, s->y, s->z,fps.fps);
+
+      render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts, text_buffer);
+      ty -= ts * 2;
+    }
 
     glfwSwapBuffers(g->window);
     glfwPollEvents();
