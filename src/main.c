@@ -65,10 +65,25 @@ typedef struct {
     GLuint extra4;
 } Attrib;
 
-void onKey(GLFWwindow *window, int key, int scancode, int action, int mods) {
+void on_key_press(GLFWwindow *window, int key, int scancode, int action, int mods) {
   if (key == GLFW_KEY_ESCAPE) {
     printf("ESC PRESSED...\n");
     g->game_running = false;
+  }
+}
+
+void on_mouse_button(GLFWwindow *window, int button, int action, int mods) {
+  int control = mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER);
+  int exclusive = glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
+
+  if (action != GLFW_PRESS) return;
+
+  if (button == GLFW_MOUSE_BUTTON_LEFT && exclusive) {
+    printf("LEFT BUTTON CLICK\n");
+  }
+
+  if (button == GLFW_MOUSE_BUTTON_RIGHT && exclusive) {
+    printf("RIGHT BUTTON CLICK\n");
   }
 }
 
@@ -199,7 +214,7 @@ void render_player(Attrib *attrib, Player *player) {
 void reset_model(){
   memset(g->players, 0, sizeof(Player) * MAX_PLAYERS);
   g->player_count = 0;
-  g->flying = 0;
+  g->flying = 1;
 }
 
 void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx, float *vy, float *vz) {
@@ -229,6 +244,41 @@ void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx
     *vx = cosf(rx + strafe);
     *vy = 0;
     *vz = sinf(rx + strafe);
+  }
+}
+
+
+void handle_mouse_input() {
+  int exclusive = glfwGetInputMode(g->window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
+
+  static double px = 0;
+  static double py = 0;
+  State *s = &g->players->state;
+
+  if (exclusive && (px || py)) {
+    double mx, my;
+    glfwGetCursorPos(g->window, &mx, &my);
+    float m = 0.0025;
+    s->rx += (mx - px) * m;
+    if (INVERT_MOUSE) {
+      s->ry += (my - py) * m;
+    }
+    else {
+      s->ry -= (my - py) * m;
+    }
+    if (s->rx < 0) {
+      s->rx += RADIANS(360);
+    }
+    if (s->rx >= RADIANS(360)){
+      s->rx -= RADIANS(360);
+    }
+    s->ry = MAX(s->ry, -RADIANS(90));
+    s->ry = MIN(s->ry, RADIANS(90));
+    px = mx;
+    py = my;
+  }
+  else {
+    glfwGetCursorPos(g->window, &px, &py);
   }
 }
 
@@ -308,6 +358,9 @@ int main(void){
   }
 
   glfwMakeContextCurrent(g->window);
+  glfwSetInputMode(g->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  glfwSetKeyCallback(g->window, on_key_press);
+  glfwSetMouseButtonCallback(g->window, on_mouse_button);
 
   if (glewInit() != GLEW_OK) {
     printf("Failed to initialize GLEW.\n");
@@ -362,12 +415,8 @@ int main(void){
   text_attrib.sampler = glGetUniformLocation(program, "sampler");
   text_attrib.extra1 = glGetUniformLocation(program, "is_sign");
 
-  glfwSetKeyCallback(g->window, onKey);
-  g->game_running = true;
-
-  reset_model();
-
   FPS fps = {0, 0, 0};
+  reset_model();
 
   g->ortho = 0;
   g->fov = 65;
@@ -379,6 +428,7 @@ int main(void){
   me->buffer = 0;
   g->player_count = 1;
 
+  g->game_running = true;
   double previous = glfwGetTime();
   while(1){
     g->scale = get_scale_factor();
@@ -392,6 +442,7 @@ int main(void){
     dt = MAX(dt, 0.0);
     previous = now;
 
+    handle_mouse_input();
     handle_movement(dt);
 
     // RENDERING

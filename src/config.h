@@ -5,6 +5,7 @@
 #define WINDOW_HEIGHT 768
 
 #define SHOW_INFO_TEXT 1
+#define INVERT_MOUSE 0
 
 #define CUBE_KEY_FORWARD 'W'
 #define CUBE_KEY_BACKWARD 'S'
