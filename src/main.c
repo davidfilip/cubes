@@ -285,9 +285,12 @@ void handle_movement(double dt) {
     //   dy = 0;
     // }
   }
-  // if (s->y < 0) {
-  //   s->y = highest_block(s->x, s->z) + 2;
-  // }
+  //if (s->y < 0) {
+   //s->y = highest_block(s->x, s->z) + 2;
+ // }
+  if(s -> y < 0) {
+    s->y = 0;
+  }
 }
 
 int main(void){
@@ -409,7 +412,7 @@ int main(void){
     float ty = g->height - ts;
     if (SHOW_INFO_TEXT) {
       snprintf(text_buffer, 1024,
-        "Hello, (%.2f, %.2f, %.2f) %dfps",
+        "Position: %.2f, %.2f, %.2f, FPS: %d",
         s->x, s->y, s->z,fps.fps);
 
       render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts, text_buffer);
