@@ -2,17 +2,43 @@
 #include <GLFW/glfw3.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "config.h"
 #include "cube.h"
 #include "matrix.h"
 #include "util.h"
+
+#define MAX_PLAYERS 8
+
+typedef struct {
+  float x;
+  float y;
+  float z;
+  float rx;
+  float ry;
+  float t;
+} State;
+
+typedef struct {
+  State state;
+  State state1;
+  State state2;
+  GLuint buffer;
+} Player;
 
 typedef struct {
   GLFWwindow *window;
   int width;
   int height;
   int scale;
+  int ortho;
+  float fov;
+  int render_radius;
+
   bool game_running;
+
+  Player players[MAX_PLAYERS];
+  int player_count;
 } Model;
 
 static Model model;
@@ -49,6 +75,12 @@ int get_scale_factor() {
   result = MAX(1, result);
   result = MIN(2, result);
   return result;
+}
+
+GLuint gen_player_buffer(float x, float y, float z, float rx, float ry) {
+  GLfloat *data = malloc_faces(10, 6);
+  make_player(data, x, y, z, rx, ry);
+  return gen_faces(10, 6, data);
 }
 
 GLuint gen_cube_buffer(float x, float y, float z, float n, int w) {
@@ -91,11 +123,30 @@ void render_item(Attrib *attrib) {
   glUniformMatrix4fv(attrib->matrix, 1, GL_FALSE, matrix);
   glUniform3f(attrib->camera, 0, 0, 5);
   glUniform1i(attrib->sampler, 0);
-  glUniform1f(attrib->timer, 0.1);
+  glUniform1f(attrib->timer, 0.1); // TODO: time of day
   int w = 1; // grass block
   GLuint buffer = gen_cube_buffer(0, 0, 0, 0.5, w);
   draw_triangles_3d_ao(attrib, buffer, 36);
   del_buffer(buffer);
+}
+
+void render_player(Attrib *attrib, Player *player) {
+  State *s = &player->state;
+  float matrix[16];
+
+  set_matrix_3d(
+      matrix, g->width, g->height,
+      s->x, s->y, s->z, s->rx, s->ry, g->fov, g->ortho, g->render_radius);
+  glUseProgram(attrib->program);
+  glUniformMatrix4fv(attrib->matrix, 1, GL_FALSE, matrix);
+  glUniform3f(attrib->camera, s->x, s->y, s->z);
+  glUniform1i(attrib->sampler, 0);
+  glUniform1f(attrib->timer, 0.1); //TODO: time of day
+}
+
+void reset_model(){
+  memset(g->players, 0, sizeof(Player) * MAX_PLAYERS);
+  g->player_count = 0;
 }
 
 int main(void){
@@ -149,16 +200,39 @@ int main(void){
   glfwSetKeyCallback(g->window, onKey);
   g->game_running = true;
 
+  reset_model();
+
+  g->ortho = 0;
+  g->fov = 65;
+  g->render_radius = RENDER_CHUNK_RADIUS;
+
+  Player *me = g->players;
+  State *s = &g->players->state;
+
+  me->buffer = 0;
+  g->player_count = 1;
+
+  s->x = 45.5f;
+  s->y = 100.5f;
+  s->z = 0.5f;
+  s->rx = 1.5f;
+  s->ry = 0.5f;
+  s->t = 0.5f;
+
   while(1){
     g->scale = get_scale_factor();
     glfwGetFramebufferSize(g->window, &g->width, &g->height);
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    del_buffer(me->buffer);
+    me->buffer = gen_player_buffer(s->x, s->y, s->z, s->rx, s->ry);
 
     glClearColor(135.0f / 255.0f, 206.0f / 255.0f, 250.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     render_item(&block_attrib);
+    render_player(&block_attrib, me);
 
     glfwSwapBuffers(g->window);
     glfwPollEvents();

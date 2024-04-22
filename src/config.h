@@ -9,4 +9,6 @@
 #define CUBE_KEY_LEFT 'A'
 #define CUBE_KEY_RIGHT 'D'
 
+#define RENDER_CHUNK_RADIUS 10
+
 #endif

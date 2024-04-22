@@ -12,4 +12,8 @@ void make_cube(
     int left, int right, int top, int bottom, int front, int back,
     float x, float y, float z, float n, int w);
 
+void make_player(
+    float *data,
+    float x, float y, float z, float rx, float ry);
+
 #endif
