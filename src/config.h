@@ -8,6 +8,7 @@
 #define CUBE_KEY_BACKWARD 'S'
 #define CUBE_KEY_LEFT 'A'
 #define CUBE_KEY_RIGHT 'D'
+#define CUBE_KEY_JUMP GLFW_KEY_SPACE
 
 #define RENDER_CHUNK_RADIUS 10
 

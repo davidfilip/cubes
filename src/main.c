@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "config.h"
 #include "cube.h"
 #include "matrix.h"
@@ -33,6 +34,7 @@ typedef struct {
   int scale;
   int ortho;
   float fov;
+  int flying;
   int render_radius;
 
   bool game_running;
@@ -147,6 +149,95 @@ void render_player(Attrib *attrib, Player *player) {
 void reset_model(){
   memset(g->players, 0, sizeof(Player) * MAX_PLAYERS);
   g->player_count = 0;
+  g->flying = 0;
+}
+
+void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx, float *vy, float *vz) {
+  *vx = 0; *vy = 0; *vz = 0;
+  if (!sz && !sx) {
+    return;
+  }
+
+  float strafe = atan2f(sz, sx);
+  if (flying) {
+    float m = cosf(ry);
+    float y = sinf(ry);
+    if (sx) {
+      if (!sz) {
+        y = 0;
+      }
+      m = 1;
+    }
+    if (sz > 0) {
+        y = -y;
+    }
+    *vx = cosf(rx + strafe) * m;
+    *vy = y;
+    *vz = sinf(rx + strafe) * m;
+  }
+  else {
+    *vx = cosf(rx + strafe);
+    *vy = 0;
+    *vz = sinf(rx + strafe);
+  }
+}
+
+void handle_movement(double dt) {
+  static float dy = 0;
+  State *s = &g->players->state;
+
+  int sz = 0;
+  int sx = 0;
+
+  float m = dt * 1.0;
+  if (glfwGetKey(g->window, CUBE_KEY_FORWARD)) sz--;
+  if (glfwGetKey(g->window, CUBE_KEY_BACKWARD)) sz++;
+  if (glfwGetKey(g->window, CUBE_KEY_LEFT)) sx--;
+  if (glfwGetKey(g->window, CUBE_KEY_RIGHT)) sx++;
+  if (glfwGetKey(g->window, GLFW_KEY_LEFT)) s->rx -= m;
+  if (glfwGetKey(g->window, GLFW_KEY_RIGHT)) s->rx += m;
+  if (glfwGetKey(g->window, GLFW_KEY_UP)) s->ry += m;
+  if (glfwGetKey(g->window, GLFW_KEY_DOWN)) s->ry -= m;
+
+  float vx, vy, vz;
+
+  get_motion_vector(g->flying, sz, sx, s->rx, s->ry, &vx, &vy, &vz);
+  if (glfwGetKey(g->window, CUBE_KEY_JUMP)) {
+    if (g->flying) {
+      vy = 1;
+    } else if (dy == 0) {
+      dy = 8;
+    }
+  }
+
+  float speed = g->flying ? 20 : 5;
+  int estimate = roundf(sqrtf(
+      powf(vx * speed, 2) +
+      powf(vy * speed + ABS(dy) * 2, 2) +
+      powf(vz * speed, 2)) * dt * 8);
+  int step = MAX(8, estimate);
+  float ut = dt / step;
+  vx = vx * ut * speed;
+  vy = vy * ut * speed;
+  vz = vz * ut * speed;
+  for (int i = 0; i < step; i++) {
+    if (g->flying) {
+      dy = 0;
+    }
+    else {
+      dy -= ut * 25;
+      dy = MAX(dy, -250);
+    }
+    s->x += vx;
+    s->y += vy + dy * ut;
+    s->z += vz;
+    // if (collide(2, &s->x, &s->y, &s->z)) {
+    //   dy = 0;
+    // }
+  }
+  // if (s->y < 0) {
+  //   s->y = highest_block(s->x, s->z) + 2;
+  // }
 }
 
 int main(void){
@@ -214,13 +305,6 @@ int main(void){
   me->buffer = 0;
   g->player_count = 1;
 
-  s->x = 45.5f;
-  s->y = 100.5f;
-  s->z = 0.5f;
-  s->rx = 1.5f;
-  s->ry = 0.5f;
-  s->t = 0.5f;
-
   double previous = glfwGetTime();
   while(1){
     g->scale = get_scale_factor();
@@ -233,6 +317,8 @@ int main(void){
     dt = MIN(dt, 0.2);
     dt = MAX(dt, 0.0);
     previous = now;
+
+    handle_movement(dt);
 
     // RENDERING
     del_buffer(me->buffer);
