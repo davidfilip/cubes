@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "config.h"
 #include "cube.h"
@@ -11,6 +12,7 @@ typedef struct {
   int width;
   int height;
   int scale;
+  bool game_running;
 } Model;
 
 static Model model;
@@ -34,6 +36,7 @@ typedef struct {
 void onKey(GLFWwindow *window, int key, int scancode, int action, int mods) {
   if (key == GLFW_KEY_ESCAPE) {
     printf("ESC PRESSED...\n");
+    g->game_running = false;
   }
 }
 
@@ -144,11 +147,12 @@ int main(void){
   block_attrib.timer = glGetUniformLocation(program, "timer");
 
   glfwSetKeyCallback(g->window, onKey);
-  glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+  g->game_running = true;
 
-  while (!glfwWindowShouldClose(g->window)){
+  while(1){
     g->scale = get_scale_factor();
     glfwGetFramebufferSize(g->window, &g->width, &g->height);
+    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     glClearColor(135.0f / 255.0f, 206.0f / 255.0f, 250.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -158,6 +162,14 @@ int main(void){
 
     glfwSwapBuffers(g->window);
     glfwPollEvents();
+
+    if (glfwWindowShouldClose(g->window)) {
+      break;
+    }
+
+    if (!g->game_running){
+      break;
+    }
   }
 
   glfwTerminate();
