@@ -12,6 +12,14 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define SIGN(x) (((x) > 0) - ((x) < 0))
 
+typedef struct {
+  unsigned int fps;
+  unsigned int frames;
+  double since;
+} FPS;
+
+void update_fps(FPS *fps);
+
 GLuint gen_buffer(GLsizei size, GLfloat *data);
 void del_buffer(GLuint buffer);
 

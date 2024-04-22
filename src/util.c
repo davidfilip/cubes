@@ -1,9 +1,21 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include "util.h"
 #include "lodepng.h"
+
+void update_fps(FPS *fps) {
+  fps->frames++;
+  double now = glfwGetTime();
+  double elapsed = now - fps->since;
+  if (elapsed >= 1) {
+    fps->fps = round(fps->frames / elapsed);
+    fps->frames = 0;
+    fps->since = now;
+  }
+}
 
 char *load_file(const char *path) {
   FILE *file = fopen(path, "rb");

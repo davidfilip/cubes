@@ -202,6 +202,8 @@ int main(void){
 
   reset_model();
 
+  FPS fps = {0, 0, 0};
+
   g->ortho = 0;
   g->fov = 65;
   g->render_radius = RENDER_CHUNK_RADIUS;
@@ -219,11 +221,20 @@ int main(void){
   s->ry = 0.5f;
   s->t = 0.5f;
 
+  double previous = glfwGetTime();
   while(1){
     g->scale = get_scale_factor();
     glfwGetFramebufferSize(g->window, &g->width, &g->height);
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+    update_fps(&fps);
+    double now = glfwGetTime();
+    double dt = now - previous;
+    dt = MIN(dt, 0.2);
+    dt = MAX(dt, 0.0);
+    previous = now;
+
+    // RENDERING
     del_buffer(me->buffer);
     me->buffer = gen_player_buffer(s->x, s->y, s->z, s->rx, s->ry);
 
