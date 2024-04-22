@@ -175,6 +175,29 @@ void draw_text(Attrib *attrib, GLuint buffer, int length) {
   glDisable(GL_BLEND);
 }
 
+void render_blocks(Attrib *attrib, Player *player) {
+  State *s = &player->state;
+  float matrix[16];
+  set_matrix_3d(
+    matrix, g->width, g->height,
+    s->x, s->y, s->z, s->rx, s->ry, g->fov, g->ortho, g->render_radius);
+
+  float planes[6][4];
+  frustum_planes(planes, g->render_radius, matrix);
+  glUseProgram(attrib->program);
+  glUniformMatrix4fv(attrib->matrix, 1, GL_FALSE, matrix);
+  glUniform3f(attrib->camera, s->x, s->y, s->z);
+  glUniform1i(attrib->sampler, 0);
+  glUniform1i(attrib->extra1, 2);
+  glUniform1f(attrib->extra2, 0.5); //light
+  glUniform1f(attrib->extra3, g->render_radius * CHUNK_SIZE);
+  glUniform1i(attrib->extra4, g->ortho);
+  glUniform1f(attrib->timer, 1); // time of the day function
+
+  GLuint buffer = gen_cube_buffer(0, 3, -5, 1, 1);
+  draw_triangles_3d_ao(attrib, buffer, 36);
+}
+
 void render_text(Attrib *attrib, int justify, float x, float y, float n, char *text) {
   float matrix[16];
   set_matrix_2d(matrix, g->width, g->height);
@@ -452,7 +475,8 @@ int main(void){
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    render_player(&block_attrib, me);
+    //render_player(&block_attrib, me);
+    render_blocks(&block_attrib, player);
 
     // RENDER TEXT //
     char text_buffer[1024];
