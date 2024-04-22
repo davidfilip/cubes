@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "config.h"
 #include "cube.h"
+#include "matrix.h"
 #include "util.h"
 
 typedef struct {
@@ -62,6 +63,24 @@ GLuint gen_cube_buffer(float x, float y, float z, float n, int w) {
   return gen_faces(10, 6, data);
 }
 
+void draw_triangles_3d_ao(Attrib *attrib, GLuint buffer, int count) {
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glEnableVertexAttribArray(attrib->position);
+    glEnableVertexAttribArray(attrib->normal);
+    glEnableVertexAttribArray(attrib->uv);
+    glVertexAttribPointer(attrib->position, 3, GL_FLOAT, GL_FALSE,
+        sizeof(GLfloat) * 10, 0);
+    glVertexAttribPointer(attrib->normal, 3, GL_FLOAT, GL_FALSE,
+        sizeof(GLfloat) * 10, (GLvoid *)(sizeof(GLfloat) * 3));
+    glVertexAttribPointer(attrib->uv, 4, GL_FLOAT, GL_FALSE,
+        sizeof(GLfloat) * 10, (GLvoid *)(sizeof(GLfloat) * 6));
+    glDrawArrays(GL_TRIANGLES, 0, count);
+    glDisableVertexAttribArray(attrib->position);
+    glDisableVertexAttribArray(attrib->normal);
+    glDisableVertexAttribArray(attrib->uv);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void render_item(Attrib *attrib) {
   float matrix[16];
   set_matrix_item(matrix, g->width, g->height, g->scale);
@@ -70,9 +89,9 @@ void render_item(Attrib *attrib) {
   glUniform3f(attrib->camera, 0, 0, 5);
   glUniform1i(attrib->sampler, 0);
   glUniform1f(attrib->timer, 0.1);
-  int w = 1; // TODO: item index
+  int w = 1; // grass block
   GLuint buffer = gen_cube_buffer(0, 0, 0, 0.5, w);
-  //draw_cube(attrib, buffer);
+  draw_triangles_3d_ao(attrib, buffer, 36);
   del_buffer(buffer);
 }
 
@@ -83,13 +102,6 @@ int main(void){
     printf("Failed to initialize GLFW.\n");
     return -1;
   }
-
-// #ifdef __APPLE__
-//   glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 3);
-//   glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 2);
-//   glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-//   glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-// #endif
 
   g->window = glfwCreateWindow(1280, 720, "Cubes", NULL, NULL);
   if (!g->window) {
@@ -133,7 +145,7 @@ int main(void){
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    //render_chunks(&block_attrib);
+    render_item(&block_attrib);
 
     glfwSwapBuffers(g->window);
     glfwPollEvents();
