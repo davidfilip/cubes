@@ -9,27 +9,11 @@
 #include "matrix.h"
 #include "util.h"
 
-#define MAX_CHUNKS 8192
 #define MAX_PLAYERS 8
 
 #define ALIGN_LEFT 0
 #define ALIGN_CENTER 1
 #define ALIGN_RIGHT 2
-
-typedef struct {
-  //Map map;
-  //Map lights;
-  //SignList signs;
-  int p;
-  int q;
-  int faces;
-  int sign_faces;
-  int dirty;
-  int miny;
-  int maxy;
-  GLuint buffer;
-  //GLuint sign_buffer;
-} Chunk;
 
 typedef struct {
   int x;
@@ -56,8 +40,6 @@ typedef struct {
 
 typedef struct {
   GLFWwindow *window;
-  Chunk chunks[MAX_CHUNKS];
-  int chunk_count;
   int width;
   int height;
   int scale;
@@ -89,10 +71,6 @@ typedef struct {
     GLuint extra3;
     GLuint extra4;
 } Attrib;
-
-int chunked(float x) {
-  return floorf(roundf(x) / CHUNK_SIZE);
-}
 
 void on_key_press(GLFWwindow *window, int key, int scancode, int action, int mods) {
   if (key == GLFW_KEY_ESCAPE) {
@@ -159,143 +137,6 @@ void draw_triangles_3d_ao(Attrib *attrib, GLuint buffer, int count) {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void draw_chunk(Attrib *attrib, Chunk *chunk) {
-  draw_triangles_3d_ao(attrib, chunk->buffer, chunk->faces * 6);
-}
-
-Chunk *find_chunk(int p, int q) {
-  for (int i = 0; i < g->chunk_count; i++) {
-    Chunk *chunk = g->chunks + i;
-    if (chunk->p == p && chunk->q == q) {
-      return chunk;
-    }
-  }
-  return 0;
-}
-
-int chunk_distance(Chunk *chunk, int p, int q) {
-  int dp = ABS(chunk->p - p);
-  int dq = ABS(chunk->q - q);
-  return MAX(dp, dq);
-}
-
-int chunk_visible(float planes[6][4], int p, int q, int miny, int maxy) {
-  int x = p * CHUNK_SIZE - 1;
-  int z = q * CHUNK_SIZE - 1;
-  int d = CHUNK_SIZE + 1;
-  float points[8][3] = {
-      {x + 0, miny, z + 0},
-      {x + d, miny, z + 0},
-      {x + 0, miny, z + d},
-      {x + d, miny, z + d},
-      {x + 0, maxy, z + 0},
-      {x + d, maxy, z + 0},
-      {x + 0, maxy, z + d},
-      {x + d, maxy, z + d}
-  };
-  int n = g->ortho ? 4 : 6;
-  for (int i = 0; i < n; i++) {
-    int in = 0;
-    int out = 0;
-    for (int j = 0; j < 8; j++) {
-        float d =
-            planes[i][0] * points[j][0] +
-            planes[i][1] * points[j][1] +
-            planes[i][2] * points[j][2] +
-            planes[i][3];
-        if (d < 0) {
-            out++;
-        }
-        else {
-            in++;
-        }
-        if (in && out) {
-            break;
-        }
-    }
-    if (in == 0) {
-        return 0;
-    }
-  }
-  return 1;
-}
-
-void delete_all_chunks() {
-  for (int i = 0; i < g->chunk_count; i++) {
-    Chunk *chunk = g->chunks + i;
-    //map_free(&chunk->map);
-    //map_free(&chunk->lights);
-    //sign_list_free(&chunk->signs);
-    del_buffer(chunk->buffer);
-    //del_buffer(chunk->sign_buffer);
-  }
-  g->chunk_count = 0;
-}
-
-void _set_block(int p, int q, int x, int y, int z, int w, int dirty) {
-  Chunk *chunk = find_chunk(p, q);
-  // if (chunk) {
-  //   Map *map = &chunk->map;
-  //   if (map_set(map, x, y, z, w)) {
-  //     if (dirty) {
-  //       dirty_chunk(chunk);
-  //     }
-  //   }
-  // }
-
-  // if (w == 0 && chunked(x) == p && chunked(z) == q) {
-  //   unset_sign(x, y, z);
-  //   set_light(p, q, x, y, z, 0);
-  // }
-}
-
-void set_block(int x, int y, int z, int w) {
-  int p = chunked(x);
-  int q = chunked(z);
-  _set_block(p, q, x, y, z, w, 1);
-  for (int dx = -1; dx <= 1; dx++) {
-    for (int dz = -1; dz <= 1; dz++) {
-      if (dx == 0 && dz == 0) {
-        continue;
-      }
-      if (dx && chunked(x + dx) == p) {
-        continue;
-      }
-      if (dz && chunked(z + dz) == q) {
-        continue;
-      }
-      _set_block(p + dx, q + dz, x, y, z, -w, 1);
-    }
-  }
-}
-
-void force_chunks(Player *player) {
-  State *s = &player->state;
-  int p = chunked(s->x);
-  int q = chunked(s->z);
-  int r = 1;
-  for (int dp = -r; dp <= r; dp++) {
-    for (int dq = -r; dq <= r; dq++) {
-      int a = p + dp;
-      int b = q + dq;
-      Chunk *chunk = find_chunk(a, b);
-      if (chunk) {
-        if (chunk->dirty) {
-          gen_chunk_buffer(chunk);
-        }
-      } else if (g->chunk_count < MAX_CHUNKS) {
-        chunk = g->chunks + g->chunk_count++;
-        create_chunk(chunk, a, b);
-        gen_chunk_buffer(chunk);
-      }
-    }
-  }
-}
-
-void ensure_chunks(Player *player) {
-  force_chunks(player);
-}
-
 GLuint gen_player_buffer(float x, float y, float z, float rx, float ry) {
   GLfloat *data = malloc_faces(10, 6);
   make_player(data, x, y, z, rx, ry);
@@ -348,43 +189,6 @@ void render_text(Attrib *attrib, int justify, float x, float y, float n, char *t
   del_buffer(buffer);
 }
 
-void render_chunks(Attrib *attrib, Player *player) {
-  State *s = &player->state;
-
-  ensure_chunks(player);
-
-  int p = chunked(s->x);
-  int q = chunked(s->z);
-
-  float matrix[16];
-  set_matrix_3d(
-      matrix, g->width, g->height,
-      s->x, s->y, s->z, s->rx, s->ry, g->fov, g->ortho, g->render_radius);
-  float planes[6][4];
-  frustum_planes(planes, g->render_radius, matrix);
-  glUseProgram(attrib->program);
-  glUniformMatrix4fv(attrib->matrix, 1, GL_FALSE, matrix);
-  glUniform3f(attrib->camera, s->x, s->y, s->z);
-  glUniform1i(attrib->sampler, 0);
-  glUniform1i(attrib->extra1, 2);
-  glUniform1f(attrib->extra2, 0); // light
-  glUniform1f(attrib->extra3, g->render_radius * CHUNK_SIZE);
-  glUniform1i(attrib->extra4, g->ortho);
-
-  for (int i = 0; i < g->chunk_count; i++) {
-    Chunk *chunk = g->chunks + i;
-
-    if (chunk_distance(chunk, p, q) > g->render_radius) {
-      continue;
-    }
-    if (!chunk_visible(planes, chunk->p, chunk->q, chunk->miny, chunk->maxy)){
-      continue;
-    }
-
-    draw_chunk(attrib, chunk);
-  }
-}
-
 void render_player(Attrib *attrib, Player *player) {
   State *s = &player->state;
   float matrix[16];
@@ -400,8 +204,6 @@ void render_player(Attrib *attrib, Player *player) {
 }
 
 void reset_model(){
-  memset(g->chunks, 0, sizeof(Chunk) * MAX_CHUNKS);
-  g->chunk_count = 0;
   memset(g->players, 0, sizeof(Player) * MAX_PLAYERS);
   g->player_count = 0;
   g->flying = 1;
@@ -622,8 +424,8 @@ int main(void){
   g->game_running = true;
   double previous = glfwGetTime();
 
-  set_block(3, 3, 1, 1);
-  set_block(1, 2, 0, 1);
+  //set_block(3, 3, 1, 1);
+  //set_block(1, 2, 0, 1);
 
   while(1){
     g->scale = get_scale_factor();
@@ -650,7 +452,6 @@ int main(void){
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    render_chunks(&block_attrib, player);
     render_player(&block_attrib, me);
 
     // RENDER TEXT //
@@ -660,8 +461,8 @@ int main(void){
     float ty = g->height - ts;
     if (SHOW_INFO_TEXT) {
       snprintf(text_buffer, 1024,
-        "Position: %.2f, %.2f, %.2f, FPS: %d, Chunks: %d",
-        s->x, s->y, s->z,fps.fps, g->chunk_count);
+        "Position: %.2f, %.2f, %.2f, FPS: %d",
+        s->x, s->y, s->z,fps.fps);
 
       render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts, text_buffer);
       ty -= ts * 2;
@@ -678,8 +479,6 @@ int main(void){
       break;
     }
   }
-
-  delete_all_chunks();
 
   glfwTerminate();
   return 0;
