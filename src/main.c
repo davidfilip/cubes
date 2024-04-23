@@ -491,7 +491,7 @@ int main(void){
   while(1){
     g->scale = get_scale_factor();
     glfwGetFramebufferSize(g->window, &g->width, &g->height);
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    glViewport(0, 0, g->width, g->height);
 
     update_fps(&fps);
     double now = glfwGetTime();
@@ -519,7 +519,7 @@ int main(void){
     if (SHOW_INFO_TEXT) {
       snprintf(text_buffer, 1024,
         "Position: %.2f, %.2f, %.2f, FPS: %d",
-        s->x, s->y, s->z,fps.fps);
+        s->x, s->y, s->z, fps.fps);
 
       render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts, text_buffer);
       ty -= ts * 2;
