@@ -9,6 +9,7 @@
 #include "matrix.h"
 #include "util.h"
 
+#define MAX_BLOCKS 8192
 #define MAX_PLAYERS 8
 
 #define ALIGN_LEFT 0
@@ -20,6 +21,8 @@ typedef struct {
   int y;
   int z;
   int w;
+
+  GLuint buffer;
 } Block;
 
 typedef struct {
@@ -43,9 +46,12 @@ typedef struct {
   int scale;
   int ortho;
   float fov;
-  int flying;
   int render_radius;
 
+  Block blocks[MAX_BLOCKS];
+  int block_count;
+
+  int flying;
   bool game_running;
 
   Player players[MAX_PLAYERS];
@@ -192,29 +198,39 @@ void render_blocks(Attrib *attrib, Player *player) {
   glUniform1i(attrib->extra4, g->ortho);
   glUniform1f(attrib->timer, 1); // time of the day function
 
-  GLuint buffer = gen_cube_buffer(0, 3, -5, 1, 1);
-  draw_triangles_3d_ao(attrib, buffer, 36);
-  del_buffer(buffer);
+  for (int i = 0; i < g->block_count; i++) {
+    Block block = g->blocks[i];
 
-  buffer = gen_cube_buffer(0, -3, -5, 1, 1);
-  draw_triangles_3d_ao(attrib, buffer, 36);
-  del_buffer(buffer);
+    //printf("i: %d, x: %d, y:%d, z:%d, w: %d\n", i, block.x, block.y, block.z, block.buffer);
 
-  buffer = gen_cube_buffer(1, 3, -5, 1, 1);
-  draw_triangles_3d_ao(attrib, buffer, 36);
-  del_buffer(buffer);
-
-  for(int i = 0; i < 80; i++){
-    for(int j = 0; j < 80; j++){
-      buffer = gen_cube_buffer(i, 0, j, 1, 2);
-      draw_triangles_3d_ao(attrib, buffer, 36);
-      del_buffer(buffer);
-    }
+    GLuint buffer = gen_cube_buffer(block.x, block.y, block.z, 1, block.w);
+    draw_triangles_3d_ao(attrib, buffer, 36);
+    del_buffer(buffer);
   }
 
-  buffer = gen_cube_buffer(2, 3, 2, 1, 2);
-  draw_triangles_3d_ao(attrib, buffer, 36);
-  del_buffer(buffer);
+  // GLuint buffer = gen_cube_buffer(0, 3, -5, 1, 1);
+  // draw_triangles_3d_ao(attrib, buffer, 36);
+  // del_buffer(buffer);
+
+  // buffer = gen_cube_buffer(0, -3, -5, 1, 1);
+  // draw_triangles_3d_ao(attrib, buffer, 36);
+  // del_buffer(buffer);
+
+  // buffer = gen_cube_buffer(1, 3, -5, 1, 1);
+  // draw_triangles_3d_ao(attrib, buffer, 36);
+  // del_buffer(buffer);
+
+  // for(int i = 0; i < 80; i++){
+  //   for(int j = 0; j < 80; j++){
+  //     buffer = gen_cube_buffer(i, 0, j, 1, 2);
+  //     draw_triangles_3d_ao(attrib, buffer, 36);
+  //     del_buffer(buffer);
+  //   }
+  // }
+
+  // buffer = gen_cube_buffer(2, 3, 2, 1, 2);
+  // draw_triangles_3d_ao(attrib, buffer, 36);
+  // del_buffer(buffer);
 }
 
 void render_text(Attrib *attrib, int justify, float x, float y, float n, char *text) {
@@ -246,12 +262,35 @@ void render_player(Attrib *attrib, Player *player) {
 }
 
 void model_setup(){
+  memset(g->blocks, 0, sizeof(Block) * MAX_BLOCKS);
+  g->block_count = 0;
   memset(g->players, 0, sizeof(Player) * MAX_PLAYERS);
   g->player_count = 0;
   g->flying = 1;
   g->ortho = 0;
   g->fov = 65;
   g->render_radius = RENDER_CHUNK_RADIUS;
+}
+
+void create_block(int x, int y, int z, int w){
+  g->block_count++;
+  Block *block = &g->blocks[g->block_count];
+
+  block->x = x;
+  block->y = y;
+  block->z = z;
+  block->w = w;
+
+ // block->buffer = gen_cube_buffer(x, y, z, 1, 3);
+}
+
+void delete_all_blocks(){
+  for (int i = 0; i < g->block_count; i++) {
+    Block *block = g->blocks + i;
+    del_buffer(block->buffer);
+  }
+
+  g->block_count = 0;
 }
 
 void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx, float *vy, float *vz) {
@@ -459,6 +498,10 @@ int main(void){
   Player *player = g->players;
   State *s = &g->players->state;
 
+  //create_block(0, -3, -5, 2);
+  create_block(5, 2, 2, 1);
+  //create_block(3, -3, 1, 2);
+
   g->game_running = true;
   double previous = glfwGetTime();
   while(1){
@@ -509,6 +552,8 @@ int main(void){
       break;
     }
   }
+
+  delete_all_blocks();
 
   glfwTerminate();
   return 0;
