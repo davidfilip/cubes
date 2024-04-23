@@ -33,8 +33,6 @@ typedef struct {
 
 typedef struct {
   State state;
-  State state1;
-  State state2;
   GLuint buffer;
 } Player;
 
@@ -196,6 +194,27 @@ void render_blocks(Attrib *attrib, Player *player) {
 
   GLuint buffer = gen_cube_buffer(0, 3, -5, 1, 1);
   draw_triangles_3d_ao(attrib, buffer, 36);
+  del_buffer(buffer);
+
+  buffer = gen_cube_buffer(0, -3, -5, 1, 1);
+  draw_triangles_3d_ao(attrib, buffer, 36);
+  del_buffer(buffer);
+
+  buffer = gen_cube_buffer(1, 3, -5, 1, 1);
+  draw_triangles_3d_ao(attrib, buffer, 36);
+  del_buffer(buffer);
+
+  for(int i = 0; i < 80; i++){
+    for(int j = 0; j < 80; j++){
+      buffer = gen_cube_buffer(i, 0, j, 1, 2);
+      draw_triangles_3d_ao(attrib, buffer, 36);
+      del_buffer(buffer);
+    }
+  }
+
+  buffer = gen_cube_buffer(2, 3, 2, 1, 2);
+  draw_triangles_3d_ao(attrib, buffer, 36);
+  del_buffer(buffer);
 }
 
 void render_text(Attrib *attrib, int justify, float x, float y, float n, char *text) {
@@ -226,10 +245,13 @@ void render_player(Attrib *attrib, Player *player) {
   glUniform1f(attrib->timer, 0.1); //TODO: time of day
 }
 
-void reset_model(){
+void model_setup(){
   memset(g->players, 0, sizeof(Player) * MAX_PLAYERS);
   g->player_count = 0;
   g->flying = 1;
+  g->ortho = 0;
+  g->fov = 65;
+  g->render_radius = RENDER_CHUNK_RADIUS;
 }
 
 void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx, float *vy, float *vz) {
@@ -431,25 +453,14 @@ int main(void){
   text_attrib.sampler = glGetUniformLocation(program, "sampler");
   text_attrib.extra1 = glGetUniformLocation(program, "is_sign");
 
+  model_setup();
+
   FPS fps = {0, 0, 0};
-  reset_model();
-
-  g->ortho = 0;
-  g->fov = 65;
-  g->render_radius = RENDER_CHUNK_RADIUS;
-
-  Player *me = g->players;
+  Player *player = g->players;
   State *s = &g->players->state;
-
-  me->buffer = 0;
-  g->player_count = 1;
 
   g->game_running = true;
   double previous = glfwGetTime();
-
-  //set_block(3, 3, 1, 1);
-  //set_block(1, 2, 0, 1);
-
   while(1){
     g->scale = get_scale_factor();
     glfwGetFramebufferSize(g->window, &g->width, &g->height);
@@ -466,11 +477,6 @@ int main(void){
     handle_movement(dt);
 
     // RENDERING
-    del_buffer(me->buffer);
-    me->buffer = gen_player_buffer(s->x, s->y, s->z, s->rx, s->ry);
-
-    Player *player = g->players;
-
     glClearColor(135.0f / 255.0f, 206.0f / 255.0f, 250.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -478,9 +484,9 @@ int main(void){
     //render_player(&block_attrib, me);
     render_blocks(&block_attrib, player);
 
-    // RENDER TEXT //
+    // RENDER TEXT
     char text_buffer[1024];
-    float ts = 20 * g->scale; // TODO: was 12 * g->scale
+    float ts = 12 * g->scale;
     float tx = ts / 2;
     float ty = g->height - ts;
     if (SHOW_INFO_TEXT) {
