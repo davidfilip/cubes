@@ -9,7 +9,7 @@
 #include "matrix.h"
 #include "util.h"
 
-#define MAX_BLOCKS 8192
+#define MAX_BLOCKS 65536
 #define MAX_PLAYERS 8
 
 #define ALIGN_LEFT 0
@@ -269,9 +269,22 @@ void delete_all_blocks(){
 
 void build_level(){
   for(int i = 0; i < 20; i++){
-    for(int j = 0; j < 80; j++){
-      create_block(i, -2, j, 2);
+    for(int j = 0; j < 20; j++){
+      create_block(i, -2, j, 6);
     }
+  }
+
+  for(int i = 0; i < 5; i++){
+    create_block(5, i, 5, i % 4 + 1);
+  }
+
+  for(int i = 0; i < 5; i++){
+    create_block(13, i, 2, 2);
+  }
+
+  for(int i = 0; i < 13; i++){
+    create_block(i + 4, 0, 2, 8);
+    create_block(4, 0, i + 2, 8);
   }
 
   create_block(0, 3, -5, 1);
@@ -486,6 +499,8 @@ int main(void){
   Player *player = g->players;
   State *s = &g->players->state;
 
+  s->rx = 2.00f;
+
   g->game_running = true;
   double previous = glfwGetTime();
   while(1){
@@ -518,8 +533,8 @@ int main(void){
     float ty = g->height - ts;
     if (SHOW_INFO_TEXT) {
       snprintf(text_buffer, 1024,
-        "Position: %.2f, %.2f, %.2f, FPS: %d",
-        s->x, s->y, s->z, fps.fps);
+        "Position: %.2f, %.2f, %.2f, Rotation: (%.2f, %.2f), FPS: %d",
+        s->x, s->y, s->z, s->rx, s->ry, fps.fps);
 
       render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts, text_buffer);
       ty -= ts * 2;
