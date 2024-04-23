@@ -196,41 +196,15 @@ void render_blocks(Attrib *attrib, Player *player) {
   glUniform1f(attrib->extra2, 0.5); //light
   glUniform1f(attrib->extra3, g->render_radius * CHUNK_SIZE);
   glUniform1i(attrib->extra4, g->ortho);
-  glUniform1f(attrib->timer, 1); // time of the day function
+  glUniform1f(attrib->timer, 0.1); // time of the day function
 
   for (int i = 0; i < g->block_count; i++) {
     Block block = g->blocks[i];
-
-    //printf("i: %d, x: %d, y:%d, z:%d, w: %d\n", i, block.x, block.y, block.z, block.buffer);
 
     GLuint buffer = gen_cube_buffer(block.x, block.y, block.z, 1, block.w);
     draw_triangles_3d_ao(attrib, buffer, 36);
     del_buffer(buffer);
   }
-
-  // GLuint buffer = gen_cube_buffer(0, 3, -5, 1, 1);
-  // draw_triangles_3d_ao(attrib, buffer, 36);
-  // del_buffer(buffer);
-
-  // buffer = gen_cube_buffer(0, -3, -5, 1, 1);
-  // draw_triangles_3d_ao(attrib, buffer, 36);
-  // del_buffer(buffer);
-
-  // buffer = gen_cube_buffer(1, 3, -5, 1, 1);
-  // draw_triangles_3d_ao(attrib, buffer, 36);
-  // del_buffer(buffer);
-
-  // for(int i = 0; i < 80; i++){
-  //   for(int j = 0; j < 80; j++){
-  //     buffer = gen_cube_buffer(i, 0, j, 1, 2);
-  //     draw_triangles_3d_ao(attrib, buffer, 36);
-  //     del_buffer(buffer);
-  //   }
-  // }
-
-  // buffer = gen_cube_buffer(2, 3, 2, 1, 2);
-  // draw_triangles_3d_ao(attrib, buffer, 36);
-  // del_buffer(buffer);
 }
 
 void render_text(Attrib *attrib, int justify, float x, float y, float n, char *text) {
@@ -291,6 +265,19 @@ void delete_all_blocks(){
   }
 
   g->block_count = 0;
+}
+
+void build_level(){
+  for(int i = 0; i < 20; i++){
+    for(int j = 0; j < 80; j++){
+      create_block(i, -2, j, 2);
+    }
+  }
+
+  create_block(0, 3, -5, 1);
+  create_block(0, 6, -5, 1);
+  create_block(1, 3, -5, 1);
+  create_block(2, 3, 2, 1);
 }
 
 void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx, float *vy, float *vz) {
@@ -493,14 +480,11 @@ int main(void){
   text_attrib.extra1 = glGetUniformLocation(program, "is_sign");
 
   model_setup();
+  build_level();
 
   FPS fps = {0, 0, 0};
   Player *player = g->players;
   State *s = &g->players->state;
-
-  //create_block(0, -3, -5, 2);
-  create_block(5, 2, 2, 1);
-  //create_block(3, -3, 1, 2);
 
   g->game_running = true;
   double previous = glfwGetTime();
