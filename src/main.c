@@ -36,6 +36,10 @@ typedef struct {
 
 typedef struct {
   State state;
+} Camera;
+
+typedef struct {
+  State state;
   GLuint buffer;
 } Player;
 
@@ -47,6 +51,7 @@ typedef struct {
   int ortho;
   float fov;
   int render_radius;
+  Camera camera;
 
   Block blocks[MAX_BLOCKS];
   int block_count;
@@ -179,8 +184,8 @@ void draw_text(Attrib *attrib, GLuint buffer, int length) {
   glDisable(GL_BLEND);
 }
 
-void render_blocks(Attrib *attrib, Player *player) {
-  State *s = &player->state;
+void render_blocks(Attrib *attrib, Camera *camera) {
+  State *s = &camera->state;
   float matrix[16];
   set_matrix_3d(
     matrix, g->width, g->height,
@@ -219,20 +224,6 @@ void render_text(Attrib *attrib, int justify, float x, float y, float n, char *t
   GLuint buffer = gen_text_buffer(x, y, n, text);
   draw_text(attrib, buffer, length);
   del_buffer(buffer);
-}
-
-void render_player(Attrib *attrib, Player *player) {
-  State *s = &player->state;
-  float matrix[16];
-
-  set_matrix_3d(
-      matrix, g->width, g->height,
-      s->x, s->y, s->z, s->rx, s->ry, g->fov, g->ortho, g->render_radius);
-  glUseProgram(attrib->program);
-  glUniformMatrix4fv(attrib->matrix, 1, GL_FALSE, matrix);
-  glUniform3f(attrib->camera, s->x, s->y, s->z);
-  glUniform1i(attrib->sampler, 0);
-  glUniform1f(attrib->timer, 0.1); //TODO: time of day
 }
 
 void model_setup(){
@@ -329,7 +320,8 @@ void handle_mouse_input() {
 
   static double px = 0;
   static double py = 0;
-  State *s = &g->players->state;
+  Camera *camera = &g->camera;
+  State *s = &camera->state;
 
   if (exclusive && (px || py)) {
     double mx, my;
@@ -360,7 +352,8 @@ void handle_mouse_input() {
 
 void handle_movement(double dt) {
   static float dy = 0;
-  State *s = &g->players->state;
+  Camera *camera = &g->camera;
+  State *s = &camera->state;
 
   int sz = 0;
   int sx = 0;
@@ -496,9 +489,9 @@ int main(void){
   build_level();
 
   FPS fps = {0, 0, 0};
-  Player *player = g->players;
-  State *s = &g->players->state;
 
+  Camera *camera = &g->camera;
+  State *s = &camera->state;
   s->rx = 2.00f;
 
   g->game_running = true;
@@ -523,8 +516,7 @@ int main(void){
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    //render_player(&block_attrib, me);
-    render_blocks(&block_attrib, player);
+    render_blocks(&block_attrib, camera);
 
     // RENDER TEXT
     char text_buffer[1024];
