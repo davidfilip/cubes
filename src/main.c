@@ -258,6 +258,17 @@ void delete_all_blocks(){
   g->block_count = 0;
 }
 
+void set_camera_position(){
+  Camera *camera = &g->camera;
+  State *s = &camera->state;
+
+  s->x = 14.00f;
+  s->y = 7.00f;
+  s->z = 17.00f;
+  s->rx = 5.89f;
+  s->ry = -0.5f;
+}
+
 void build_level(){
   for(int i = 0; i < 20; i++){
     for(int j = 0; j < 20; j++){
@@ -492,7 +503,8 @@ int main(void){
 
   Camera *camera = &g->camera;
   State *s = &camera->state;
-  s->rx = 2.00f;
+
+  set_camera_position();
 
   g->game_running = true;
   double previous = glfwGetTime();
