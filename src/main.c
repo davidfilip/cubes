@@ -163,7 +163,7 @@ GLuint gen_cube_buffer(float x, float y, float z, float n, int w) {
       {0.5, 0.5, 0.5, 0.5},
       {0.5, 0.5, 0.5, 0.5}
   };
-  make_cube(data, ao, light, 1, 1, 1, 1, 1, 1, x, y, z, n, w);
+  make_cube(data, ao, light, 1, 1, 1, 1, 1, 1, x * 2, y * 2, z * 2, n, w);
   return gen_faces(10, 6, data);
 }
 
@@ -272,12 +272,12 @@ void set_camera_position(){
 void build_level(){
   for(int i = 0; i < 20; i++){
     for(int j = 0; j < 20; j++){
-      create_block(i, -2, j, 6);
+      create_block(i, -1, j, 6);
     }
   }
 
   for(int i = 0; i < 5; i++){
-    create_block(5, i, 5, i % 4 + 1);
+    create_block(4, i, 4, i % 4 + 1);
   }
 
   for(int i = 0; i < 5; i++){
@@ -285,8 +285,8 @@ void build_level(){
   }
 
   for(int i = 0; i < 13; i++){
-    create_block(i + 4, 0, 2, 8);
-    create_block(4, 0, i + 2, 8);
+    create_block(i, 0, 0, 8);
+    create_block(0, 0, i, 8);
   }
 
   create_block(0, 3, -5, 1);
