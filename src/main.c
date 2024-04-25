@@ -289,10 +289,10 @@ void build_level(){
     create_block(0, 0, i, 8);
   }
 
-  create_block(0, 3, -5, 1);
+  create_block(0, 3, -5, 9);
   create_block(0, 6, -5, 1);
   create_block(1, 3, -5, 1);
-  create_block(2, 3, 2, 1);
+  create_block(2, 3, 2, 9);
 }
 
 void get_motion_vector(int flying, int sz, int sx, float rx, float ry, float *vx, float *vy, float *vz) {
