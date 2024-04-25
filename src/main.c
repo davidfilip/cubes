@@ -238,7 +238,6 @@ void model_setup(){
 }
 
 void create_block(int x, int y, int z, int w){
-  g->block_count++;
   Block *block = &g->blocks[g->block_count];
 
   block->x = x;
@@ -246,6 +245,7 @@ void create_block(int x, int y, int z, int w){
   block->z = z;
   block->w = w;
 
+  g->block_count++;
  // block->buffer = gen_cube_buffer(x, y, z, 1, 3);
 }
 
